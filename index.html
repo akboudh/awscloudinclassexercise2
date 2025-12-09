@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AWS In-Class Activity: S3 + Lambda + Triggers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: #111827;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.2);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border-subtle: #1f2937;
+      --danger: #f97373;
+      --success: #4ade80;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1e293b 0, #020617 55%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 3rem;
+    }
+    .shell {
+      width: 100%;
+      max-width: 960px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 {
+      font-size: clamp(2.1rem, 3vw, 2.6rem);
+      letter-spacing: 0.03em;
+      margin-bottom: 0.5rem;
+    }
+    header p {
+      color: var(--text-muted);
+      max-width: 46rem;
+      margin: 0.3rem auto;
+      line-height: 1.6;
+    }
+    .tagline {
+      font-size: 0.9rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+    }
+    nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin: 2rem 0;
+    }
+    .card-link {
+      display: block;
+      padding: 1.4rem 1.3rem;
+      border-radius: 0.9rem;
+      background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.85));
+      border: 1px solid var(--border-subtle);
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, border-color 0.12s ease-out, background 0.12s ease-out;
+    }
+    .card-link::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.2), transparent 60%);
+      transition: opacity 0.18s ease-out;
+      pointer-events: none;
+    }
+    .card-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 35px rgba(15,23,42,0.8);
+      border-color: var(--accent-soft);
+      background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.9));
+    }
+    .card-link:hover::before {
+      opacity: 1;
+    }
+    .card-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--text-muted);
+    }
+    .emoji {
+      font-size: 1.1rem;
+    }
+    .card-link p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .meta-chip {
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(31,41,55,0.9);
+    }
+    section {
+      background: rgba(15,23,42,0.95);
+      border-radius: 1rem;
+      border: 1px solid var(--border-subtle);
+      padding: 1.5rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 18px 40px rgba(2,6,23,0.9);
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    h2 span {
+      font-size: 1.1rem;
+    }
+    ul {
+      list-style: disc;
+      padding-left: 1.2rem;
+      margin-top: 0.4rem;
+      color: var(--text-muted);
+    }
+    li {
+      margin: 0.25rem 0;
+      line-height: 1.5;
+    }
+    .learning-goals li::marker {
+      color: var(--accent);
+    }
+    .callout {
+      border-radius: 0.8rem;
+      border: 1px solid rgba(148,163,184,0.4);
+      padding: 0.9rem 0.85rem;
+      background: radial-gradient(circle at top left, rgba(148,163,184,0.1), transparent 60%);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+    .callout strong {
+      color: var(--text-main);
+    }
+    .inline-kbd {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.4rem;
+      border: 1px solid rgba(148,163,184,0.8);
+      background: rgba(15,23,42,0.9);
+      font-size: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.12rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.45);
+      color: var(--accent);
+      background: rgba(8,47,73,0.8);
+    }
+    footer {
+      margin-top: 1.8rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 720px) {
+      .two-col {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="tagline">Cloud Computing · Hands-On Lab</div>
+      <h1>AWS In-Class Activity: S3, Lambda & Event Triggers</h1>
+      <p>
+        In this short lab, students build a small event-driven system: uploading an object to an S3 bucket
+        automatically triggers a Lambda function that logs metadata and writes a JSON log file to a second bucket.
+      </p>
+      <p>
+        This site is meant to be hosted on GitHub Pages and used during a single class session (≈60–90 minutes).
+      </p>
+    </header>
+
+    <nav>
+      <a class="card-link" href="lab-steps.html">
+        <div class="card-heading">
+          <span class="emoji">📘</span>
+          <span>Student Lab Guide</span>
+          <span class="pill">Start here</span>
+        </div>
+        <p>
+          Step-by-step instructions for creating S3 buckets, a Lambda function, and wiring
+          up an S3 event trigger. Includes checks and reflection questions.
+        </p>
+        <div class="meta-row">
+          <span class="meta-chip">~60–75 min</span>
+          <span class="meta-chip">AWS sandbox / labrole</span>
+          <span class="meta-chip">Beginner-friendly</span>
+        </div>
+      </a>
+
+      <a class="card-link" href="lambda-code.html">
+        <div class="card-heading">
+          <span class="emoji">💻</span>
+          <span>Sample Lambda Code & Events</span>
+        </div>
+        <p>
+          Ready-to-copy Python and Node.js handlers plus a sample S3 event for testing. Useful for debugging
+          or when students get stuck on syntax.
+        </p>
+        <div class="meta-row">
+          <span class="meta-chip">Python & Node.js</span>
+          <span class="meta-chip">S3 event JSON</span>
+        </div>
+      </a>
+
+      <a class="card-link" href="#instructor-notes">
+        <div class="card-heading">
+          <span class="emoji">🧑‍🏫</span>
+          <span>Instructor Notes</span>
+        </div>
+        <p>
+          Learning outcomes, suggested timing, and quick variations to scale up or down based
+          on your students’ experience level.
+        </p>
+        <div class="meta-row">
+          <span class="meta-chip">Prep ≤ 5 min</span>
+          <span class="meta-chip">No extra AWS setup</span>
+        </div>
+      </a>
+    </nav>
+
+    <section>
+      <h2><span>🎯</span> Learning Outcomes</h2>
+      <ul class="learning-goals">
+        <li>Explain the role of S3 and Lambda in an event-driven architecture.</li>
+        <li>Create and configure S3 buckets in an AWS sandbox environment.</li>
+        <li>Deploy a basic Lambda function and connect it to S3 using object-created event triggers.</li>
+        <li>Inspect CloudWatch Logs to verify that events are being processed.</li>
+        <li>Reason about security and naming constraints in a shared AWS account.</li>
+      </ul>
+    </section>
+
+    <section id="instructor-notes">
+      <h2><span>🧑‍🏫</span> Instructor Notes</h2>
+      <div class="two-col">
+        <div>
+          <h3 style="font-size:0.95rem;margin-bottom:0.2rem;">Assumptions</h3>
+          <ul>
+            <li>Students have access to an AWS sandbox (e.g., AWS Academy) using the <code>labrole</code> role.</li>
+            <li>S3 and Lambda are available services with default permissions via the lab role.</li>
+            <li>No need for students to create IAM roles manually; the console’s default role creation is sufficient.</li>
+          </ul>
+
+          <h3 style="font-size:0.95rem;margin:0.75rem 0 0.2rem;">Suggested Timing</h3>
+          <ul>
+            <li>Concept intro / whiteboard: 10–15 min</li>
+            <li>Guided build (Sections 1–3): 35–45 min</li>
+            <li>Testing & reflection: 10–15 min</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="callout">
+            <strong>Tip:</strong> Ask students to append something unique to their bucket names (e.g.,
+            initials + random number). S3 bucket names are globally unique, so
+            <code>lab-input-bucket</code> will almost certainly already be taken.
+          </div>
+
+          <div class="badge-row">
+            <div class="badge">Event-driven</div>
+            <div class="badge">Serverless</div>
+            <div class="badge">S3 + Lambda</div>
+            <div class="badge">CloudWatch Logs</div>
+          </div>
+          <p style="margin-top:0.7rem;font-size:0.87rem;color:var(--text-muted);">
+            Use the <span class="inline-kbd">Student Lab Guide</span> during class. You can open
+            <span class="inline-kbd">Sample Lambda Code</span> as a “reference solution” on the projector
+            once most students are done.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Host these files in a public GitHub repo and enable GitHub Pages. Point students at
+      <code>https://&lt;your-username&gt;.github.io/&lt;repo-name&gt;/</code>.
+    </footer>
+  </div>
+</body>
+</html>
