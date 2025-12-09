@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lab Guide: S3 → Lambda Event Trigger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #020617;
+      --panel-soft: #020617;
+      --border-subtle: #1f2937;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56,189,248,0.18);
+      --accent-strong: rgba(56,189,248,0.3);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --step-bg: #020617;
+      --step-border: #1f2937;
+      --check: #4ade80;
+      --warn: #f97373;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #0b1120 0, #020617 60%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+    .shell {
+      width: 100%;
+      max-width: 900px;
+    }
+    header {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+    header h1 {
+      font-size: clamp(1.9rem, 3vw, 2.3rem);
+      margin-bottom: 0.4rem;
+    }
+    header p {
+      color: var(--text-muted);
+      max-width: 40rem;
+      line-height: 1.6;
+    }
+    .crumbs {
+      font-size: 0.8rem;
+      margin-bottom: 0.6rem;
+      color: var(--text-muted);
+    }
+    .crumbs a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .crumbs span {
+      opacity: 0.6;
+    }
+    a.nav-top {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.85rem;
+      text-decoration: none;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+      gap: 1.2rem;
+    }
+    .steps, .sidebar {
+      background: rgba(15,23,42,0.96);
+      border-radius: 1rem;
+      border: 1px solid var(--border-subtle);
+      padding: 1.4rem 1.3rem 1.6rem;
+      box-shadow: 0 18px 40px rgba(2,6,23,0.9);
+    }
+    .sidebar {
+      position: sticky;
+      top: 1rem;
+      height: fit-content;
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    h2 span {
+      font-size: 1.1rem;
+    }
+    .step {
+      background: var(--step-bg);
+      border-radius: 0.9rem;
+      border: 1px solid var(--step-border);
+      padding: 1rem 0.95rem 1rem;
+      margin-top: 0.8rem;
+      position: relative;
+    }
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.4rem;
+    }
+    .step-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      border: 1px solid var(--accent-soft);
+      font-size: 0.8rem;
+    }
+    .step h3 {
+      font-size: 0.98rem;
+      margin-bottom: 0.25rem;
+    }
+    .step-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .step ol {
+      margin-top: 0.5rem;
+      padding-left: 1.25rem;
+    }
+    .step li {
+      margin: 0.25rem 0;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+    .kbd {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.4rem;
+      border: 1px solid rgba(148,163,184,0.8);
+      background: rgba(15,23,42,0.9);
+      font-size: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.85rem;
+      padding: 0.12rem 0.28rem;
+      border-radius: 0.35rem;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(31,41,55,0.9);
+    }
+    .callout {
+      margin-top: 0.5rem;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(148,163,184,0.4);
+      padding: 0.7rem 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: radial-gradient(circle at top left, rgba(148,163,184,0.12), transparent 57%);
+    }
+    .callout strong {
+      color: var(--text-main);
+    }
+    .callout.warn {
+      border-color: rgba(248,113,113,0.5);
+      background: radial-gradient(circle at top left, rgba(248,113,113,0.12), transparent 60%);
+    }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 0.5rem;
+    }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 0.25rem 0;
+    }
+    .check-icon {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: rgba(148,163,184,0.9);
+      flex-shrink: 0;
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+    .status-chip span {
+      font-size: 0.8rem;
+    }
+    .sidebar h3 {
+      font-size: 0.96rem;
+      margin-bottom: 0.35rem;
+    }
+    .sidebar p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin: 0.5rem 0 0.4rem;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.12rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(56,189,248,0.45);
+      color: var(--accent);
+      background: rgba(8,47,73,0.8);
+    }
+    .reflection {
+      margin-top: 0.6rem;
+      border-top: 1px dashed rgba(31,41,55,0.9);
+      padding-top: 0.6rem;
+      font-size: 0.84rem;
+    }
+    .reflection ul {
+      margin-top: 0.3rem;
+      padding-left: 1.15rem;
+      color: var(--text-muted);
+    }
+    footer {
+      margin-top: 1.4rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    @media (max-width: 800px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .sidebar {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="crumbs">
+        <a href="index.html">⟵ Back to overview</a>
+        <span> / Student Lab Guide</span>
+      </div>
+      <h1>Lab: Automatically Log S3 Uploads with Lambda</h1>
+      <p>
+        You will create two S3 buckets and a Lambda function. When you upload a file to the
+        “input” bucket, S3 will trigger your Lambda function, which writes a JSON log file
+        into the “logs” bucket and prints details to CloudWatch Logs.
+      </p>
+    </header>
+
+    <main>
+      <section class="steps">
+        <h2><span>🧪</span> Step-By-Step Instructions</h2>
+
+        <!-- STEP 0 -->
+        <article class="step" id="step-0">
+          <div class="step-header">
+            <div>
+              <div class="step-label">
+                <div class="step-number">0</div>
+                <span>Setup</span>
+              </div>
+              <h3>Sign in & choose a unique suffix</h3>
+            </div>
+            <div class="step-meta">~5 minutes</div>
+          </div>
+          <ol>
+            <li>
+              Sign in to your AWS sandbox or AWS Academy environment as instructed by your instructor.
+              Make sure you are using the <code>labrole</code> role if that is part of your course setup.
+            </li>
+            <li>
+              Pick a short, unique suffix you will use in resource names, for example:
+              <code>jsmith842</code>.
+            </li>
+            <li>
+              Write it down: you’ll use this suffix for your S3 bucket names.
+            </li>
+          </ol>
+          <div class="callout warn">
+            <strong>Important:</strong> S3 bucket names must be globally unique. A name like
+            <code>lab-input-bucket</code> will almost certainly already exist. Use something like
+            <code>lab-input-jsmith842</code> instead.
+          </div>
+        </article>
+
+        <!-- STEP 1 -->
+        <article class="step" id="step-1">
+          <div class="step-header">
+            <div>
+              <div class="step-label">
+                <div class="step-number">1</div>
+                <span>S3 Buckets</span>
+              </div>
+              <h3>Create “input” and “logs” S3 buckets</h3>
+            </div>
+            <div class="step-meta">~10 minutes</div>
+          </div>
+          <ol>
+            <li>
+              In the AWS console, open the <span class="kbd">Services</span> menu and choose
+              <span class="kbd">S3</span>.
+            </li>
+            <li>
+              Click <span class="kbd">Create bucket</span> and create your input bucket.
+              Suggested name:
+              <code>lab-input-&lt;your-suffix&gt;</code>  
+              Example: <code>lab-input-jsmith842</code>.
+            </li>
+            <li>
+              Accept the default settings unless your instructor tells you otherwise.
+              (Versioning and encryption can stay as the defaults.)
+            </li>
+            <li>
+              Create a second bucket for logs:
+              <code>lab-logs-&lt;your-suffix&gt;</code>.
+            </li>
+          </ol>
+
+          <ul class="checklist">
+            <li>
+              <span class="check-icon">✓</span>
+              <span>You see two S3 buckets in your console, both with your unique suffix.</span>
+            </li>
+          </ul>
+        </article>
+
+        <!-- STEP 2 -->
+        <article class="step" id="step-2">
+          <div class="step-header">
+            <div>
+              <div class="step-label">
+                <div class="step-number">2</div>
+                <span>Lambda</span>
+              </div>
+              <h3>Create the Lambda function</h3>
+            </div>
+            <div class="step-meta">~15 minutes</div>
+          </div>
+          <ol>
+            <li>
+              Open the <span class="kbd">Services</span> menu and choose
+              <span class="kbd">Lambda</span>.
+            </li>
+            <li>
+              Click <span class="kbd">Create function</span>.
+            </li>
+            <li>
+              Choose <span class="kbd">Author from scratch</span> and use:
+              <ul style="margin-top:0.3rem;">
+                <li><strong>Function name:</strong> <code>s3-upload-logger-&lt;your-suffix&gt;</code></li>
+                <li><strong>Runtime:</strong> Python 3.x or Node.js 18.x (your choice)</li>
+                <li><strong>Execution role:</strong> Use the default option provided by the lab, or
+                  allow Lambda to create a new role with basic permissions.
+                </li>
+              </ul>
+            </li>
+            <li>
+              Click <span class="kbd">Create function</span>.
+            </li>
+            <li>
+              Replace the default function code with one of the samples from the
+              <a href="lambda-code.html">Sample Lambda Code</a> page (Python or Node).
+              Make sure to update the bucket name inside the code to your
+              <code>lab-logs-&lt;your-suffix&gt;</code> bucket.
+            </li>
+            <li>
+              Click <span class="kbd">Deploy</span> to save your changes.
+            </li>
+          </ol>
+
+          <div class="callout">
+            <strong>Goal:</strong> When your Lambda is triggered by S3, it should:
+            <ol style="margin-top:0.3rem;padding-left:1.1rem;">
+              <li>Read details about the uploaded object (bucket, key, size).</li>
+              <li>Write a JSON log file to your logs bucket.</li>
+              <li>Print useful information to the function logs.</li>
+            </ol>
+          </div>
+
+          <div class="status-chip">
+            <span>✅</span> Ready when Lambda deploys without errors.
+          </div>
+        </article>
+
+        <!-- STEP 3 -->
+        <article class="step" id="step-3">
+          <div class="step-header">
+            <div>
+              <div class="step-label">
+                <div class="step-number">3</div>
+                <span>Trigger</span>
+              </div>
+              <h3>Connect S3 “Object Created” event to Lambda</h3>
+            </div>
+            <div class="step-meta">~10 minutes</div>
+          </div>
+          <ol>
+            <li>
+              Go back to the S3 console and open your <code>lab-input-&lt;your-suffix&gt;</code> bucket.
+            </li>
+            <li>
+              Choose the <span class="kbd">Properties</span> tab.
+            </li>
+            <li>
+              Scroll down to the <strong>Event notifications</strong> section and click
+              <span class="kbd">Create event notification</span>.
+            </li>
+            <li>
+              Use a name like <code>on-object-created</code>.
+            </li>
+            <li>
+              Under <strong>Event types</strong>, select:
+              <code>All object create events</code>.
+            </li>
+            <li>
+              Under <strong>Destination</strong>, choose <strong>Lambda function</strong> and
+              select your function (for example
+              <code>s3-upload-logger-jsmith842</code>).
+            </li>
+            <li>
+              Confirm any prompts that allow S3 to invoke your Lambda function.
+            </li>
+            <li>
+              Save the event notification.
+            </li>
+          </ol>
+
+          <div class="callout">
+            <strong>Check yourself:</strong> In the Lambda console, you should now see an
+            S3 trigger attached to your function in the “Designer” section.
+          </div>
+        </article>
+
+        <!-- STEP 4 -->
+        <article class="step" id="step-4">
+          <div class="step-header">
+            <div>
+              <div class="step-label">
+                <div class="step-number">4</div>
+                <span>Test</span>
+              </div>
+              <h3>Upload a file and inspect the results</h3>
+            </div>
+            <div class="step-meta">~15 minutes</div>
+          </div>
+          <ol>
+            <li>
+              On your local machine, create a small text file (for example
+              <code>hello-lambda.txt</code>) with any content you like.
+            </li>
+            <li>
+              In the S3 console, open your <code>lab-input-&lt;your-suffix&gt;</code> bucket and click
+              <span class="kbd">Upload</span>. Add your text file and complete the upload.
+            </li>
+            <li>
+              Wait a few seconds, then open your <code>lab-logs-&lt;your-suffix&gt;</code> bucket.
+            </li>
+            <li>
+              You should see a new object with a name similar to your original file but ending in
+              <code>.json</code> or <code>.log.json</code> (depending on the sample code).
+            </li>
+            <li>
+              Click the log object, then choose <span class="kbd">Open</span> or
+              <span class="kbd">Download</span> to view it. Verify that it contains:
+              <ul style="margin-top:0.3rem;padding-left:1.1rem;">
+                <li>The bucket name and key of the original upload</li>
+                <li>Object size</li>
+                <li>Event time</li>
+              </ul>
+            </li>
+            <li>
+              In the Lambda console, open your function and select
+              <span class="kbd">Monitor → Logs</span> (or “View logs in CloudWatch”).  
+              Open the most recent log stream and confirm that it printed the same details.
+            </li>
+          </ol>
+
+          <ul class="checklist">
+            <li>
+              <span class="check-icon">✓</span>
+              <span>You see at least one JSON log object in your logs bucket.</span>
+            </li>
+            <li>
+              <span class="check-icon">✓</span>
+              <span>CloudWatch Logs show that your Lambda function ran successfully.</span>
+            </li>
+          </ul>
+        </article>
+
+        <!-- STEP 5 -->
+        <article class="step" id="step-5">
+          <div class="step-header">
+            <div>
+              <div class="step-label">
+                <div class="step-number">5</div>
+                <span>Reflect</span>
+              </div>
+              <h3>Answer a few quick questions</h3>
+            </div>
+            <div class="step-meta">~5–10 minutes</div>
+          </div>
+          <div class="reflection">
+            <p><strong>In your notes (or LMS submission), answer:</strong></p>
+            <ul>
+              <li>
+                1. In this lab, what causes the Lambda function to run? Describe the event
+                in plain language.
+              </li>
+              <li>
+                2. Where is the “glue” between S3 and Lambda configured: in your code, or in
+                AWS itself? Explain.
+              </li>
+              <li>
+                3. If the Lambda function fails (for example, due to a bug), how would you
+                go about debugging it?
+              </li>
+              <li>
+                4. Imagine you wanted to extend this system to generate image thumbnails or
+                virus-scan uploads. At a high level, what would change in your architecture?
+              </li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <aside class="sidebar">
+        <h3>What you’ll hand in</h3>
+        <p>
+          Your instructor may ask you to show the following as proof of completion:
+        </p>
+        <ul class="checklist">
+          <li>
+            <span class="check-icon">✓</span>
+            <span>Screenshot of your two S3 buckets with unique names.</span>
+          </li>
+          <li>
+            <span class="check-icon">✓</span>
+            <span>Screenshot of your Lambda console showing the S3 trigger attached.</span>
+          </li>
+          <li>
+            <span class="check-icon">✓</span>
+            <span>Screenshot or copy-paste of a JSON log object from your logs bucket.</span>
+          </li>
+          <li>
+            <span class="check-icon">✓</span>
+            <span>Short answers to the reflection questions in Step 5.</span>
+          </li>
+        </ul>
+
+        <h3 style="margin-top:1rem;">Concepts reinforced</h3>
+        <div class="badge-row">
+          <div class="badge">Serverless</div>
+          <div class="badge">S3 events</div>
+          <div class="badge">Lambda triggers</div>
+          <div class="badge">CloudWatch Logs</div>
+        </div>
+
+        <h3 style="margin-top:1rem;">Stuck?</h3>
+        <p>
+          If your function isn’t being triggered:
+        </p>
+        <ul class="checklist">
+          <li>
+            <span class="check-icon">?</span>
+            <span>Double-check that the event notification is attached to the correct bucket.</span>
+          </li>
+          <li>
+            <span class="check-icon">?</span>
+            <span>Confirm that the event type includes object create events.</span>
+          </li>
+          <li>
+            <span class="check-icon">?</span>
+            <span>Look at CloudWatch Logs for any error messages.</span>
+          </li>
+        </ul>
+
+        <p style="margin-top:0.7rem;font-size:0.82rem;color:var(--text-muted);">
+          You can compare your code with the reference on the
+          <a href="lambda-code.html">Sample Lambda Code</a> page.
+        </p>
+      </aside>
+    </main>
+
+    <footer>
+      Need the overview again? Go back to <a href="index.html">the main page</a>.
+    </footer>
+  </div>
+</body>
+</html>
