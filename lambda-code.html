@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sample Lambda Code: S3 Upload Logger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #020617;
+      --border-subtle: #1f2937;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56,189,248,0.22);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --code-bg: #020617;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #0b1120 0, #020617 60%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem 1rem 3rem;
+      display: flex;
+      justify-content: center;
+    }
+    .shell {
+      width: 100%;
+      max-width: 900px;
+    }
+    header {
+      margin-bottom: 1.4rem;
+    }
+    .crumbs {
+      font-size: 0.8rem;
+      margin-bottom: 0.6rem;
+      color: var(--text-muted);
+    }
+    .crumbs a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    h1 {
+      font-size: clamp(1.9rem, 3vw, 2.3rem);
+      margin-bottom: 0.4rem;
+    }
+    header p {
+      color: var(--text-muted);
+      max-width: 40rem;
+      line-height: 1.6;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr);
+      gap: 1.1rem;
+    }
+    section {
+      background: rgba(15,23,42,0.96);
+      border-radius: 1rem;
+      border: 1px solid var(--border-subtle);
+      padding: 1.4rem 1.3rem 1.6rem;
+      box-shadow: 0 18px 40px rgba(2,6,23,0.9);
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    h2 span {
+      font-size: 1.1rem;
+    }
+    h3 {
+      font-size: 0.98rem;
+      margin-bottom: 0.4rem;
+    }
+    pre {
+      background: var(--code-bg);
+      border-radius: 0.8rem;
+      border: 1px solid rgba(31,41,55,0.9);
+      padding: 0.8rem 0.9rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      margin-bottom: 0.7rem;
+    }
+    code {
+      font-family: inherit;
+      font-size: inherit;
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
+    .tag {
+      font-size: 0.75rem;
+      padding: 0.12rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      color: var(--text-muted);
+    }
+    .badge {
+      border-color: rgba(56,189,248,0.55);
+      color: var(--accent);
+      background: rgba(8,47,73,0.75);
+    }
+    .callout {
+      border-radius: 0.8rem;
+      border: 1px solid rgba(148,163,184,0.4);
+      padding: 0.7rem 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: radial-gradient(circle at top left, rgba(148,163,184,0.12), transparent 60%);
+      margin-top: 0.4rem;
+    }
+    .callout strong {
+      color: var(--text-main);
+    }
+    .note {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.4rem;
+      border: 1px solid rgba(148,163,184,0.8);
+      background: rgba(15,23,42,0.9);
+      font-size: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    footer {
+      margin-top: 1.4rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    @media (max-width: 800px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="crumbs">
+        <a href="index.html">⟵ Back to overview</a>
+        <span> / Sample Lambda Code</span>
+      </div>
+      <h1>Sample Lambda Code & S3 Event</h1>
+      <p>
+        Use these examples as a reference while working through the lab. Update the bucket name
+        to match <code>lab-logs-&lt;your-suffix&gt;</code>. You can choose either Python or Node.js.
+      </p>
+    </header>
+
+    <main>
+      <section>
+        <h2><span>🐍</span> Python 3.x Example</h2>
+        <div class="tag-row">
+          <span class="tag badge">Runtime: Python 3.x</span>
+          <span class="tag">Uses boto3 (built-in)</span>
+        </div>
+        <pre><code>import json
+import os
+import boto3
+from datetime import datetime, timezone
+
+s3 = boto3.client("s3")
+
+LOG_BUCKET = os.environ.get("LOG_BUCKET", "lab-logs-your-suffix-here")
+
+def lambda_handler(event, context):
+    """
+    S3 event handler.
+    Triggered when an object is created in the input bucket.
+    Writes a JSON log file into the logs bucket.
+    """
+    print("Received event:", json.dumps(event))
+
+    # Many events can be batched together, so we loop.
+    for record in event.get("Records", []):
+        src_bucket = record["s3"]["bucket"]["name"]
+        src_key = record["s3"]["object"]["key"]
+        size = record["s3"]["object"].get("size", 0)
+        event_time = record.get("eventTime")
+
+        log_data = {
+            "source_bucket": src_bucket,
+            "source_key": src_key,
+            "size_bytes": size,
+            "event_time": event_time,
+            "logged_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        # Create a simple log object name inside the logs bucket.
+        log_key = f"logs/{src_key}.log.json"
+
+        print(f"Writing log to s3://{LOG_BUCKET}/{log_key}")
+        s3.put_object(
+            Bucket=LOG_BUCKET,
+            Key=log_key,
+            Body=json.dumps(log_data, indent=2),
+            ContentType="application/json",
+        )
+
+    return {"statusCode": 200, "body": "OK"}</code></pre>
+
+        <div class="callout">
+          <strong>Setup tip:</strong> In the Lambda console, set an environment variable named
+          <code>LOG_BUCKET</code> with the value of your logs bucket
+          (for example <code>lab-logs-jsmith842</code>). This is easier to change than editing code.
+        </div>
+      </section>
+
+      <section>
+        <h2><span>🟦</span> Node.js 18.x Example</h2>
+        <div class="tag-row">
+          <span class="tag badge">Runtime: Node.js 18.x</span>
+          <span class="tag">Uses AWS SDK v3 (built-in)</span>
+        </div>
+        <pre><code>import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({});
+const LOG_BUCKET = process.env.LOG_BUCKET || "lab-logs-your-suffix-here";
+
+export const handler = async (event) =&gt; {
+  console.log("Received event:", JSON.stringify(event));
+
+  const putCommands = [];
+
+  for (const record of event.Records ?? []) {
+    const srcBucket = record.s3.bucket.name;
+    const srcKey = record.s3.object.key;
+    const size = record.s3.object.size ?? 0;
+    const eventTime = record.eventTime;
+
+    const logData = {
+      source_bucket: srcBucket,
+      source_key: srcKey,
+      size_bytes: size,
+      event_time: eventTime,
+      logged_at: new Date().toISOString(),
+    };
+
+    const logKey = `logs/${srcKey}.log.json`;
+
+    console.log(`Writing log to s3://${LOG_BUCKET}/${logKey}`);
+
+    putCommands.push(
+      s3.send(
+        new PutObjectCommand({
+          Bucket: LOG_BUCKET,
+          Key: logKey,
+          Body: JSON.stringify(logData, null, 2),
+          ContentType: "application/json",
+        })
+      )
+    );
+  }
+
+  await Promise.all(putCommands);
+  return { statusCode: 200, body: "OK" };
+};</code></pre>
+
+        <div class="note">
+          In the Lambda console, choose <span class="kbd">Runtime settings</span> and set
+          the handler to <code>index.handler</code> if your file name is <code>index.mjs</code>
+          or <code>index.js</code>.
+        </div>
+      </section>
+    </main>
+
+    <section style="margin-top:1.1rem;">
+      <h2><span>📦</span> Sample S3 Event (for the Test tab)</h2>
+      <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:0.5rem;">
+        You can use this sample event in the Lambda console’s
+        <span class="kbd">Test</span> feature. Update the bucket and key fields to match your own
+        input bucket and a sample object key.
+      </p>
+      <pre><code>{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2025-01-01T12:34:56.000Z",
+      "eventName": "ObjectCreated:Put",
+      "s3": {
+        "bucket": {
+          "name": "lab-input-your-suffix-here"
+        },
+        "object": {
+          "key": "hello-lambda.txt",
+          "size": 42
+        }
+      }
+    }
+  ]
+}</code></pre>
+      <div class="callout">
+        <strong>Reminder:</strong> When you use the real S3 trigger,
+        AWS will generate this event JSON for you. This sample is just for testing
+        that your function logic works before wiring S3 and Lambda together.
+      </div>
+    </section>
+
+    <footer>
+      Ready to build the full flow? Follow the
+      <a href="lab-steps.html">Student Lab Guide</a>.
+    </footer>
+  </div>
+</body>
+</html>
